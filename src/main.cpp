@@ -3,9 +3,7 @@
 #include <ArtnetWifi.h>
 #include <FastLED.h>
 #include <esp_wifi.h>
-#include <DNSServer.h>
-#include <WifiManager.h>
-#include <WiFiUdp.h>
+#include <WiFiManager.h>
 #include <ArduinoOTA.h>
 
 // LED settings
@@ -101,31 +99,7 @@ void onDmxFrame(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t *d
   }
 }
 
-
-void setup() {
-  Serial.begin(115200);
-  Serial.println("Booting...");
-
-  // Set up FastLED git remote add origin git@github.com:dpkn/bloclock2.git
-  FastLED.addLeds<WS2812B, dataPin, GRB>(leds, numLeds);
-  initTest();
-
-  // Set up WiFi Manager, blocks setup thread until connected
-  WiFiManager wifiManager;
-  wifiManager.autoConnect(DEVICE_NAME, PASSWORD);
-
-  Serial.println("Connected");
-  Serial.print("IP address: ");
-  Serial.println(WiFi.localIP());
-  
-  initTest();
-
-  // Set system up for higher performance:
-  WiFi.setSleep(false);
-  esp_wifi_set_ps(WIFI_PS_NONE);
-
-  artnet.begin();
-  artnet.setArtDmxCallback(onDmxFrame);
+void setupOTA(){
 
   // Set up Arduino OTA update system
   ArduinoOTA.setHostname(DEVICE_NAME);
@@ -162,6 +136,37 @@ void setup() {
   });
   ArduinoOTA.begin();
   Serial.println("Ready of OTA updates");
+}
+
+void setup() {
+
+  WiFi.mode(WIFI_STA);
+  WiFi.setSleep(false);
+  esp_wifi_set_ps(WIFI_PS_NONE);
+
+  Serial.begin(115200);
+  Serial.println("Booting...");
+
+  // Set up FastLED and test all lights
+  FastLED.addLeds<WS2812B, dataPin, GRB>(leds, numLeds);
+  initTest();
+
+  // Set up WiFi Manager
+  WiFiManager wm;
+  wm.resetSettings();
+  wm.setClass("invert");
+
+  if (wm.autoConnect(DEVICE_NAME, PASSWORD)){
+
+    Serial.println("Connected with IP address:");
+    Serial.println(WiFi.localIP());
+
+    initTest();
+
+    artnet.begin();
+    artnet.setArtDmxCallback(onDmxFrame);
+    setupOTA();
+  }
 }
 
 void loop() {
