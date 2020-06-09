@@ -7,7 +7,9 @@
 #include <ArduinoOTA.h>
 
 // LED settings
-const int numLeds = 135;                  
+const uint8_t kMatrixWidth = 15;
+const uint8_t kMatrixHeight = 9;
+const int numLeds = kMatrixWidth * kMatrixHeight;
 const int numberOfChannels = numLeds * 3; // (1 led = 3 channels)
 const byte dataPin = 4;
 CRGB leds[numLeds];
@@ -23,6 +25,8 @@ int previousDataLength = 0;
 // Security Settings, used both for WiFi portal as well as OTA-update authentication
 #define DEVICE_NAME "bloclock"
 #define PASSWORD "block1234"
+
+unsigned long lastFrameReceived = 0;
 
 /**
  * Function to test all LEDs, called after connection is made
@@ -52,6 +56,31 @@ void initTest()
     leds[i] = CRGB(0, 0, 0);
   }
   FastLED.show();
+}
+/*
+* XY Map For serpentine layout, generated with https://macetech.github.io/FastLED-XY-Map-Generator/
+*/
+uint8_t XY(uint8_t x, uint8_t y)
+{
+  if ((x >= kMatrixWidth) || (y >= kMatrixHeight))
+  {
+    return (numLeds + 2);
+  }
+
+  const uint8_t XYTable[] = {
+      0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,
+      29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15,
+      30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44,
+      59, 58, 57, 56, 55, 54, 53, 52, 51, 50, 49, 48, 47, 46, 45,
+      60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74,
+      89, 88, 87, 86, 85, 84, 83, 82, 81, 80, 79, 78, 77, 76, 75,
+      90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104,
+      119, 118, 117, 116, 115, 114, 113, 112, 111, 110, 109, 108, 107, 106, 105,
+      120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134};
+
+  uint8_t i = (y * kMatrixWidth) + x;
+  uint8_t j = XYTable[i];
+  return j;
 }
 
 /**
@@ -94,9 +123,12 @@ void onDmxFrame(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t *d
   if (sendFrame)
   {
     FastLED.show();
+
     // Reset universeReceived to 0
     memset(universesReceived, 0, maxUniverses);
   }
+
+  lastFrameReceived = millis();
 }
 
 void setupOTA(){
@@ -153,7 +185,7 @@ void setup() {
 
   // Set up WiFi Manager
   WiFiManager wm;
-  wm.resetSettings();
+//  wm.resetSettings();
   wm.setClass("invert");
 
   if (wm.autoConnect(DEVICE_NAME, PASSWORD)){
@@ -172,4 +204,12 @@ void setup() {
 void loop() {
   ArduinoOTA.handle();
   artnet.read();
+  unsigned long lastFrameMsAgo = millis() - lastFrameReceived;
+
+// Reset display if no frames are received for a second
+if (lastFrameMsAgo >= 5000)
+  {
+    FastLED.clear();
+    FastLED.show();
+  }
 }
