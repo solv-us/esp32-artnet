@@ -185,7 +185,7 @@ void setup() {
 
   // Set up WiFi Manager
   WiFiManager wm;
-//  wm.resetSettings();
+  wm.resetSettings();
   wm.setClass("invert");
 
   if (wm.autoConnect(DEVICE_NAME, PASSWORD)){
@@ -212,4 +212,5 @@ if (lastFrameMsAgo >= 5000)
     FastLED.clear();
     FastLED.show();
   }
+  
 }
